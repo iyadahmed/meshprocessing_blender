@@ -2,7 +2,7 @@ from itertools import chain
 
 import bmesh
 import bpy
-from bmesh.types import BMesh
+from bmesh.types import BMesh, BMEdge, BMFace
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.geometry import (
@@ -12,21 +12,31 @@ from mathutils.geometry import (
 )
 
 
-def bm_edge_vec(bm_edge):
-    return bm_edge.verts[1].co - bm_edge.verts[0].co
+def bm_edge_vec(e: BMEdge) -> Vector:
+    return e.verts[1].co - e.verts[0].co
+
+
+def is_point_on_bm_edge(p: Vector, e: BMEdge):
+    edge_length = bm_edge_vec(e).length
+    return (p - e.verts[0].co).length <= edge_length
+
+
+def is_point_on_bm_face_tri(p: Vector, f: BMFace):
+    assert len(f.verts) == 3
+    return bool(intersect_point_tri(p, *(v.co for v in f.verts)))
+
+
+def intersect_bm_edge_face_tri(e: BMEdge, f: BMFace):
+    assert len(f.verts) == 3
+    return intersect_line_plane(e.verts[0].co, e.verts[1].co, f.verts[0].co, f.normal)
 
 
 def bm_tri_tri_intersect(bm_face1, bm_face2):
     points = []
     for e in bm_face1.edges:
-        edge_length = bm_edge_vec(e).length
-        p = intersect_line_plane(
-            e.verts[0].co, e.verts[1].co, bm_face2.verts[0].co, bm_face2.normal
-        )
+        p = intersect_bm_edge_face_tri(e, bm_face2)
         if p:
-            is_in_tri = intersect_point_tri(p, *(v.co for v in bm_face2.verts))
-            is_in_edge = (p - e.verts[0].co).length <= edge_length
-            if is_in_edge and is_in_tri:
+            if is_point_on_bm_edge(p, e) and is_point_on_bm_face_tri(p, bm_face2):
                 points.append(p)
     return points
 
