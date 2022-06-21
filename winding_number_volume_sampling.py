@@ -22,7 +22,7 @@ def tet_solid_angle(O: Vector, A: Vector, B: Vector, C: Vector):
 
 
 def calc_winding_number(point: Vector, mesh: bpy.types.Mesh):
-    w = 0
+    w = 0.0
     mesh.calc_loop_triangles()
     tri: bpy.types.MeshLoopTriangle
     for tri in mesh.loop_triangles:
