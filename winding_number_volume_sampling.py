@@ -23,25 +23,18 @@ def tet_solid_angle(O: Vector, A: Vector, B: Vector, C: Vector):
 
 def calc_winding_number(point: Vector, mesh: bpy.types.Mesh):
     w = 0
-    running_sum = 0.0
     mesh.calc_loop_triangles()
     tri: bpy.types.MeshLoopTriangle
     for tri in mesh.loop_triangles:
         a, b, c = (mesh.vertices[i].co for i in tri.vertices)
-        running_sum += tet_solid_angle(point, a, b, c)
-        if running_sum > (2 * math.pi):
-            w += 1
-            running_sum = 0.0
-        elif running_sum < (-2 * math.pi):
-            w -= 1
-            running_sum = 0.0
+        w += tet_solid_angle(point, a, b, c) / (4 * math.pi)
     return w
 
 
-def is_inside(point: Vector, mesh: bpy.types.Mesh):
+def is_inside(point: Vector, mesh: bpy.types.Mesh, isovalue=0.5):
     """Checks if point is inside mesh,
     assumes mesh already has consistent normals with positive volume everywhere inside"""
-    return calc_winding_number(point, mesh) > 0
+    return calc_winding_number(point, mesh) > isovalue
 
 
 if __name__ == "__main__":
