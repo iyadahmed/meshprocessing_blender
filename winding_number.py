@@ -23,7 +23,13 @@ obj = bpy.context.object
 mesh: bpy.types.Mesh = obj.data
 mesh.calc_loop_triangles()
 
+
+p = Vector()
 tri: bpy.types.MeshLoopTriangle
+
+w = 0
 for tri in mesh.loop_triangles:
     a, b, c = (mesh.vertices[i].co for i in tri.vertices)
-    print(a, b, c)
+    w += solid_angle(p, a, b, c)
+
+print(w)
