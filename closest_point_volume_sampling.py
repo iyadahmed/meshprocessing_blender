@@ -5,18 +5,19 @@ import bpy
 from mathutils.bvhtree import BVHTree
 
 
-def _bm_grow_tagged(seed_face: bmesh.types.BMFace):
-    """Flood fill untagged linked faces starting from a faces, tags and returns them"""
+def _bm_grow_untagged_manifold(seed_face: bmesh.types.BMFace):
+    """Flood fill untagged and linked faces that are connected via manifold edges starting from a seed face, tags those faces and returns them"""
     faces = [seed_face]
     e: bmesh.types.BMEdge
     lf: bmesh.types.BMFace
     for f in faces:
         for e in f.edges:
-            for lf in e.link_faces:
-                if lf != f:
-                    if not lf.tag:
-                        faces.append(lf)
-                        lf.tag = True
+            if e.is_manifold:
+                for lf in e.link_faces:
+                    if lf != f:
+                        if not lf.tag:
+                            faces.append(lf)
+                            lf.tag = True
     return faces
 
 
@@ -29,7 +30,7 @@ def get_loose_parts(bm: bmesh.types.BMesh):
             # We could yield instead
             # but tag could be modifed after yield
             # so better to store results in a list
-            loose_parts.append(_bm_grow_tagged(f))
+            loose_parts.append(_bm_grow_untagged_manifold(f))
     return loose_parts
 
 
