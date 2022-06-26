@@ -23,7 +23,6 @@ def tet_solid_angle(O: Vector, A: Vector, B: Vector, C: Vector):
 
 def calc_winding_number(point: Vector, mesh: bpy.types.Mesh):
     w = 0.0
-    mesh.calc_loop_triangles()
     tri: bpy.types.MeshLoopTriangle
     for tri in mesh.loop_triangles:
         a, b, c = (mesh.vertices[i].co for i in tri.vertices)
@@ -37,6 +36,8 @@ def is_inside(point: Vector, mesh: bpy.types.Mesh, isovalue=0.5):
     return calc_winding_number(point, mesh) > isovalue
 
 
+from timeit import default_timer
+
 if __name__ == "__main__":
     obj = bpy.context.object
     assert obj.type == "MESH"
@@ -48,7 +49,13 @@ if __name__ == "__main__":
     points = rng.uniform(low=min_bb, high=max_bb, size=(1000, 3))
 
     # Filter points
-    inside_points = [p for p in points if is_inside(Vector(p), obj.data)]
+    mesh: bpy.types.Mesh = obj.data
+    mesh.calc_loop_triangles()
+
+    t0 = default_timer()
+    inside_points = [p for p in points if is_inside(Vector(p), mesh)]
+    t1 = default_timer()
+    print(f"Filtering points finished in {t1 - t0}")
 
     # Create point cloud
     points_mesh = bpy.data.meshes.new("")
