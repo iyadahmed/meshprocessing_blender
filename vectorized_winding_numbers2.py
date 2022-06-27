@@ -4,6 +4,9 @@ from timeit import default_timer
 import bpy
 import numpy as np
 
+# This is a vectorized version for many points
+# This currently might have memory/perf issues with large number of points (e.g. 1000 00)
+
 
 # References
 # https://github.com/marmakoide/inside-3d-mesh/blob/master/is_inside_mesh.py
@@ -16,7 +19,7 @@ def scoped_timer(msg: str):
     t0 = default_timer()
     yield
     t1 = default_timer()
-    print(f"{msg} finished in {t1 - t0} seconds.")
+    print(f"{msg} finished in {t1 - t0:.2f} seconds.")
 
 
 if __name__ == "__main__":
@@ -40,7 +43,8 @@ if __name__ == "__main__":
 
     tris_shifted = tris - query_points[:, np.newaxis]
 
-    norm = np.linalg.norm(tris_shifted, axis=2, ord=2)
+    with scoped_timer("Calculating norm"):
+        norm = np.linalg.norm(tris_shifted, axis=2, ord=2)
 
     v1_norm = norm[:, 0::3]
     v2_norm = norm[:, 1::3]
@@ -50,21 +54,30 @@ if __name__ == "__main__":
     v2 = tris_shifted[:, 1::3]
     v3 = tris_shifted[:, 2::3]
 
-    denominator = (
-        v1_norm * v2_norm * v3_norm
-        + (v1 * v2).sum(axis=2) * v3_norm
-        + (v1 * v3).sum(axis=2) * v2_norm
-        + (v2 * v3).sum(axis=2) * v1_norm
-    )
-    numerator = np.linalg.det(tris_shifted.reshape(NUM_QUERY_POINTS, -1, 3, 3))
+    with scoped_timer("Calculating denominator"):
+        denominator = (
+            v1_norm * v2_norm * v3_norm
+            + (v1 * v2).sum(axis=2) * v3_norm
+            + (v1 * v3).sum(axis=2) * v2_norm
+            + (v2 * v3).sum(axis=2) * v1_norm
+        )
 
-    w = np.arctan2(numerator, denominator).sum(axis=1)
+    with scoped_timer("Reshaping"):
+        tris_reshaped = tris_shifted.reshape(NUM_QUERY_POINTS, -1, 3, 3)
 
-    is_inside = w >= (2.0 * np.pi)
-    filtered_points = query_points[is_inside]
+    with scoped_timer("Calculating determinant"):
+        numerator = np.linalg.det(tris_reshaped)
+
+    with scoped_timer("Calculating arctangent"):
+        w = np.arctan2(numerator, denominator).sum(axis=1)
+
+    with scoped_timer("Filtering points"):
+        is_inside = w >= (2.0 * np.pi)
+        filtered_points = query_points[is_inside]
 
     # Create point cloud
-    points_mesh = bpy.data.meshes.new("")
-    points_mesh.from_pydata(filtered_points, [], [])
-    points_obj = bpy.data.objects.new("", points_mesh)
-    bpy.context.scene.collection.objects.link(points_obj)
+    with scoped_timer("Creating point cloud"):
+        points_mesh = bpy.data.meshes.new("")
+        points_mesh.from_pydata(filtered_points, [], [])
+        points_obj = bpy.data.objects.new("", points_mesh)
+        bpy.context.scene.collection.objects.link(points_obj)

@@ -6,8 +6,7 @@ import bpy
 import numpy as np
 import numpy.typing as npt
 
-# Vectorized to speed up query for one point
-# TODO: vectorize for many points
+# Vectorized to speed up query for one point (mesh triangles are vectorized)
 
 # References
 # https://github.com/marmakoide/inside-3d-mesh/blob/master/is_inside_mesh.py
