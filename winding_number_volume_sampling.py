@@ -46,7 +46,7 @@ if __name__ == "__main__":
     obj = bpy.context.object
     assert obj.type == "MESH"
 
-    # Generate poitns inside bounding box
+    # Generate points inside bounding box
     min_bb = np.min(obj.bound_box, axis=0)
     max_bb = np.max(obj.bound_box, axis=0)
     rng = np.random.default_rng()
