@@ -1,12 +1,16 @@
-from math import atan
 import math
+from math import atan2
 
 import bpy
 import numpy as np
 from mathutils import Vector
 
-
+# References
+# https://github.com/marmakoide/inside-3d-mesh/blob/master/is_inside_mesh.py
 # https://en.wikipedia.org/wiki/Solid_angle#Tetrahedron
+# https://igl.ethz.ch/projects/winding-number/robust-inside-outside-segmentation-using-generalized-winding-numbers-siggraph-2013-compressed-jacobson-et-al.pdf
+
+
 def tet_solid_angle(O: Vector, A: Vector, B: Vector, C: Vector):
     av: Vector = A - O
     bv: Vector = B - O
@@ -18,7 +22,7 @@ def tet_solid_angle(O: Vector, A: Vector, B: Vector, C: Vector):
 
     numerator = av.dot(bv.cross(cv))
     denominator = al * bl * cl + av.dot(bv) * cl + av.dot(cv) * bl + bv.dot(cv) * al
-    return atan(2 * (numerator / denominator))
+    return atan2(numerator, denominator)
 
 
 def calc_winding_number(point: Vector, mesh: bpy.types.Mesh):
@@ -26,14 +30,14 @@ def calc_winding_number(point: Vector, mesh: bpy.types.Mesh):
     tri: bpy.types.MeshLoopTriangle
     for tri in mesh.loop_triangles:
         a, b, c = (mesh.vertices[i].co for i in tri.vertices)
-        w += tet_solid_angle(point, a, b, c) / (4 * math.pi)
+        w += tet_solid_angle(point, a, b, c)
     return w
 
 
-def is_inside(point: Vector, mesh: bpy.types.Mesh, isovalue=0.5):
+def is_inside(point: Vector, mesh: bpy.types.Mesh):
     """Checks if point is inside mesh,
     assumes mesh already has consistent normals with positive volume everywhere inside"""
-    return calc_winding_number(point, mesh) > isovalue
+    return calc_winding_number(point, mesh) >= (2 * math.pi)
 
 
 from timeit import default_timer
