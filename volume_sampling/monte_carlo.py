@@ -1,5 +1,3 @@
-from itertools import count
-
 import bmesh
 import bpy
 import numpy as np
@@ -17,7 +15,7 @@ def uniform_sample_sphere(num_samples: int):
     return np.c_[r * np.cos(phi), r * np.sin(phi), z]
 
 
-SPHERE_SAMPLES = uniform_sample_sphere(100)
+SPHERE_SAMPLES = uniform_sample_sphere(64)
 
 
 if __name__ == "__main__":
@@ -32,16 +30,12 @@ if __name__ == "__main__":
     bm.free()
 
     def is_inside(query_point: Vector):
-        n = 0
-        for direction in SPHERE_SAMPLES:
-            if bvh.ray_cast(query_point, direction)[0]:
-                n += 1
-        return n == len(SPHERE_SAMPLES)
+        return all(bvh.ray_cast(query_point, d)[0] for d in SPHERE_SAMPLES)
 
     # Generate points inside bounding box
     min_bb = np.min(obj.bound_box, axis=0)
     max_bb = np.max(obj.bound_box, axis=0)
-    query_points = RNG.uniform(low=min_bb, high=max_bb, size=(1000, 3))
+    query_points = RNG.uniform(low=min_bb, high=max_bb, size=(10000, 3))
 
     filtered_points = [p for p in query_points if is_inside(Vector(p))]
 
