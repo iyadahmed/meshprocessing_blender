@@ -19,7 +19,7 @@ def scoped_timer(msg: str):
     t0 = default_timer()
     yield
     t1 = default_timer()
-    print(f"{msg} finished in {t1 - t0} seconds.")
+    print(f"{msg} finished in {t1 - t0:.2f} seconds.")
 
 
 def calc_winding_number_vectorized(query_point: npt.DTypeLike, tris: npt.DTypeLike):
@@ -69,15 +69,17 @@ if __name__ == "__main__":
     min_bb = np.min(obj.bound_box, axis=0)
     max_bb = np.max(obj.bound_box, axis=0)
     rng = np.random.default_rng()
-    query_points = rng.uniform(low=min_bb, high=max_bb, size=(1000, 3))
+    query_points = rng.uniform(low=min_bb, high=max_bb, size=(100000, 3))
 
     mesh: bpy.types.Mesh = obj.data
     mesh.calc_loop_triangles()
     tris = np.array(
         [mesh.vertices[i].co for tri in mesh.loop_triangles for i in tri.vertices]
     )
-
-    with scoped_timer("Filtering Points"):
+    print(f"Number of mesh triangles = {len(mesh.loop_triangles)}")
+    with scoped_timer(
+        f"Filtering {len(query_points)} points using Generalized Winding Numbers"
+    ):
         filtered_points = [p for p in query_points if is_inside(p, tris)]
 
     # Create point cloud
