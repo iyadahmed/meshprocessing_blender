@@ -7,6 +7,7 @@ from mathutils.bvhtree import BVHTree
 RNG = np.random.default_rng()
 
 
+# https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#UniformlySamplingaHemisphere
 def uniform_sample_sphere(num_samples: int):
     u = RNG.uniform(0, 1, (num_samples, 2))
     z = 1 - 2 * u[:, 0]
