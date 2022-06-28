@@ -5,6 +5,7 @@ import bpy
 import numpy as np
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.geometry import intersect_point_tri
 
 
 def _bm_grow_untagged_manifold(seed_face: bmesh.types.BMFace):
@@ -54,16 +55,19 @@ if __name__ == "__main__":
     # new_obj = bpy.data.objects.new("", new_mesh)
     # bpy.context.scene.collection.objects.link(new_obj)
 
+    bmesh.ops.triangulate(bm, faces=bm.faces)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
-    trees: List[BVHTree] = []
     bm.verts.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+
+    trees: List[BVHTree] = []
     verts = [v.co.copy() for v in bm.verts]
 
-    for faces in get_manifold_patches(bm):
+    for i, faces in enumerate(get_manifold_patches(bm)):
         polys = [[v.index for v in f.verts] for f in faces]
         bvh = BVHTree.FromPolygons(verts, polys)
-        trees.append(bvh)
+        trees.append((bvh, polys, i))
 
     # f: bmesh.types.BMFace
     # for f in bm.faces:
@@ -75,25 +79,29 @@ if __name__ == "__main__":
 
     bm.free()
 
-    def is_inside(p: Vector):
-        for t in trees:
-            location, normal, polygon_index, distance = t.find_nearest(p)
-            if location:
-                if (location - p).dot(normal) > 0:
-                    return True
+    def is_inside(query_point: Vector):
+        for bvh, polys in trees:
+            closest_point, normal, polygon_index, distance = bvh.find_nearest(
+                query_point
+            )
+            if closest_point:
+                if (closest_point - query_point).dot(normal) > 0:
+                    a, b, c = (verts[i] for i in polys[polygon_index])
+                    if intersect_point_tri(closest_point, a, b, c):
+                        return True
         return False
 
     # Generate points inside bounding box
     min_bb = np.min(obj.bound_box, axis=0)
     max_bb = np.max(obj.bound_box, axis=0)
     rng = np.random.default_rng()
-    points = rng.uniform(low=min_bb, high=max_bb, size=(1000, 3))
+    query_points = rng.uniform(low=min_bb, high=max_bb, size=(1000, 3))
 
     # Filter points
-    inside_points = [p for p in points if is_inside(Vector(p))]
+    filtered_points = [p for p in query_points if is_inside(Vector(p))]
 
     # Create point cloud
-    points_mesh = bpy.data.meshes.new("")
-    points_mesh.from_pydata(inside_points, [], [])
-    points_obj = bpy.data.objects.new("", points_mesh)
-    bpy.context.scene.collection.objects.link(points_obj)
+    out_mesh = bpy.data.meshes.new("")
+    out_mesh.from_pydata(filtered_points, [], [])
+    out_obj = bpy.data.objects.new("", out_mesh)
+    bpy.context.scene.collection.objects.link(out_obj)
