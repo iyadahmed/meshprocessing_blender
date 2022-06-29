@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # Generate points inside bounding box
     min_bb = np.min(obj.bound_box, axis=0)
     max_bb = np.max(obj.bound_box, axis=0)
-    query_points = RNG.uniform(low=min_bb, high=max_bb, size=(100000, 3))
+    query_points = RNG.uniform(low=min_bb, high=max_bb, size=(50000, 3))
 
     with scoped_timer(
         f"Filtering {len(query_points)} points using Monte Carlo Integration"
