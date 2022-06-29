@@ -62,8 +62,8 @@ if __name__ == "__main__":
     bvh: BVHTree = BVHTree.FromBMesh(bm)
     print(f"Number of mesh triangles = {len(bm.faces)}")
 
-    def is_inside(query_point: Vector):
-        w = 0
+    def is_inside(query_point: Vector, hole_tolerance: float = 0.0):
+        w = 0.0
         for direction in SPHERE_SAMPLES:
             polygon_index = bvh.ray_cast(query_point, direction)[2]
             if polygon_index:
@@ -71,7 +71,9 @@ if __name__ == "__main__":
                 a, b, c = (v.co for v in face.verts)
                 w += tet_solid_angle(query_point, a, b, c)
 
-        return w >= (2 * math.pi)
+        # Clamp tolerance to [0.0, 1.0] range
+        hole_tolerance = max(min(hole_tolerance, 1.0), 0.0)
+        return w >= ((1.0 - hole_tolerance) * 2.0 * math.pi)
 
     # Generate points inside bounding box
     min_bb = np.min(obj.bound_box, axis=0)
